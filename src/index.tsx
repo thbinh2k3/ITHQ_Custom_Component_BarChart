@@ -1,15 +1,15 @@
 import React, { useState, MouseEvent } from "react";
 import { type FC } from "react";
 import { Retool } from "@tryretool/custom-component-support";
+import "./app.css";
 
 // Types
 interface BarDataPoint {
   label: string;
   value: number;
   color?: string;
-  category?: string;
-  metadata?: Record<string, string | number | boolean>;
 }
+
 
 // Tooltip component
 const Tooltip: FC<{
@@ -19,6 +19,8 @@ const Tooltip: FC<{
   content: string;
 }> = ({ show, x, y, content }) => {
   if (!show || !content) return null;
+
+
 
   return (
     <div
@@ -64,17 +66,17 @@ const Bar: FC<{
     content: "",
   });
 
+
   const percentage = maxValue > 0 ? (data.value / maxValue) * 100 : 0;
   const isVertical = orientation === "vertical";
   const barColor = data.color || "#064A55";
 
   const handleMouseEnter = (e: MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-
     setTooltip({
       show: true,
       x: rect.left + rect.width / 2,
-      y: rect.bottom + 8, // luôn hiển thị ngay bên dưới bar
+      y: rect.bottom + 8,
       content: `${data.label}: ${data.value.toLocaleString?.() || 0}`,
     });
   };
@@ -83,61 +85,123 @@ const Bar: FC<{
     setTooltip({ show: false, x: 0, y: 0, content: "" });
   };
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isVertical ? "column" : "row",
-        alignItems: "center",
-        gap: isVertical ? "6px" : "12px",
-        position: "relative",
-        width: isVertical ? "auto" : "100%",
-      }}
-    >
-      {/* Label khi vertical */}
-      {isVertical && (
+
+
+  if (isVertical) {
+    // ---------------- Vertical bar ----------------
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "6px",
+          position: "relative",
+        }}
+      >
+        {/* Label */}
         <div
           style={{
-            marginBottom: "8px",
+            marginBottom: "4px",
             fontSize: "13px",
             color: "#374151",
             textAlign: "center",
             fontWeight: 500,
+            wordBreak: "break-word",
           }}
         >
           {data.label}
         </div>
-      )}
 
-      {/* Label khi horizontal */}
-      {!isVertical && (
+        {/* Bar container */}
         <div
           style={{
-            fontSize: "13px",
-            color: "#374151",
+            position: "relative",
+            cursor: onBarClick ? "pointer" : "default",
+            width: "48px",
+            height: "250px",
+            backgroundColor: "#f3f4f6",
+            borderRadius: "4px",
             display: "flex",
-            alignItems: "center",
-            width: "100px",
-            flexShrink: 0,
-            fontWeight: 500,
+            alignItems: "flex-end",
           }}
         >
-          {data.label}
+          {/* Bar fill */}
+          <div
+            style={{
+              backgroundColor: barColor,
+              borderRadius: "4px",
+              transition: "all 0.3s ease-in-out",
+              height: `${percentage}%`,
+              width: "100%",
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={() => onBarClick?.(data)}
+          />
+
+          {/* Value label */}
+          {showValues && (
+            <div
+              style={{
+                position: "absolute",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: percentage >= 95 ? "white" : "black",
+                top: '6px',
+                left: "50%",
+                transform: "translateX(-50%)"
+              }}
+            >
+              {data.value?.toLocaleString?.() || 0}
+            </div>
+          )}
         </div>
-      )}
+
+        <Tooltip {...tooltip} />
+      </div>
+    );
+  }
+
+  // ---------------- Horizontal bar ----------------
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        width: "100%",
+        position: "relative",
+      }}
+    >
+      {/* Label (có thể xuống dòng, không ảnh hưởng bar) */}
+      <div
+        style={{
+          fontSize: "13px",
+          color: "#374151",
+          width: "120px",          // cố định vùng label
+          flexShrink: 0,
+          fontWeight: 500,
+          textAlign: "right",
+          wordBreak: "break-word", // cho phép xuống dòng
+          whiteSpace: "normal",
+          lineHeight: "1.2em",
+        }}
+      >
+        {data.label}
+      </div>
 
       {/* Bar container */}
       <div
         style={{
           position: "relative",
           cursor: onBarClick ? "pointer" : "default",
-          width: isVertical ? "48px" : "100%",
-          height: isVertical ? "250px" : "170%",
+          flex: 1,
+          height: "24px",           // ✅ luôn cố định
           backgroundColor: "#f3f4f6",
           borderRadius: "4px",
-          transition: "all 0.2s ease",
           display: "flex",
-          alignItems: isVertical ? "flex-end" : "center",
+          alignItems: "center",
         }}
       >
         {/* Bar fill */}
@@ -146,8 +210,8 @@ const Bar: FC<{
             backgroundColor: barColor,
             borderRadius: "4px",
             transition: "all 0.3s ease-in-out",
-            [isVertical ? "height" : "width"]: `${percentage}%`,
-            [isVertical ? "width" : "height"]: "100%",
+            width: `${percentage}%`,
+            height: "100%",         // ✅ không bị ảnh hưởng label
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -161,13 +225,10 @@ const Bar: FC<{
               position: "absolute",
               fontSize: "11px",
               fontWeight: 600,
-              color: "black",
-              right: isVertical ? "auto" : "8px",
-              top: isVertical ? "6px" : "50%",
-              left: isVertical ? "50%" : "auto",
-              transform: isVertical
-                ? "translateX(-50%)"
-                : "translateY(-50%)",
+              color: percentage >= 95 ? "white" : "black",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
             }}
           >
             {data.value?.toLocaleString?.() || 0}
@@ -175,13 +236,13 @@ const Bar: FC<{
         )}
       </div>
 
-      {/* Tooltip */}
       <Tooltip {...tooltip} />
     </div>
   );
 };
 
-// Main BarChart component
+
+/// Main BarChart component
 export const BarChartCustom: FC = () => {
   const [title] = Retool.useStateString({ name: "title" });
   const [subtitle] = Retool.useStateString({ name: "subtitle" });
@@ -194,63 +255,95 @@ export const BarChartCustom: FC = () => {
     name: "showValues",
     initialValue: true,
   });
-  const [maxBars] = Retool.useStateNumber({ name: "maxBars" });
-  const [isDrillDownEnabled = false] = Retool.useStateBoolean({
-    name: "isDrillDownEnabled",
-    initialValue: false,
-  });
 
-  const displayData: BarDataPoint[] = (data || [])
-    .slice(0, maxBars || 10)
-    .map((d: any) => ({
-      label: d.label,
-      value: d.value,
-      color: d.color,
-    }));
+  const [point, setPoint] = Retool.useStateObject({
+    name: 'point',
+    initialValue: {},
+    inspector: 'hidden'
+  })
+
+  // 🔑 Lưu bar được click
+  // const [clickedBar, setClickedBar] = Retool.useStateObject({
+  //   name: "clickedBar",
+  // });
+
+  const displayData: BarDataPoint[] = (data || []).map((d: any) => ({
+    label: d.label,
+    value: d.value,
+    color: d.color || "#064A55",
+  }));
+
   const maxValue = Math.max(...displayData.map((d) => d.value || 0), 1);
 
+  const triggerClickBar = Retool.useEventCallback({ name: "onBarClick" });
+
   const handleBarClick = (dataPoint: BarDataPoint) => {
-    if (!isDrillDownEnabled) return;
-    Retool.triggerEvent?.("onBarClick", dataPoint);
+    setPoint(dataPoint as unknown as Record<string, any>);
+    triggerClickBar();
   };
 
   return (
     <div
       style={{
         width: "93%",
-        height: "400px",
+        height: "auto",
         backgroundColor: "white",
         borderRadius: "12px",
         border: "1px solid #e5e7eb",
         boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
         padding: "20px",
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         overflow: "hidden",
       }}
     >
       {/* Header */}
-      <div style={{ marginBottom: "20px" }}>
-        <h3
-          style={{
-            fontSize: "18px",
-            fontWeight: 600,
-            color: "#111827",
-            margin: 0,
-          }}
-        >
-          {title || "Bar Chart"}
-        </h3>
+      <div
+        style={{
+          marginBottom: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          {/* Icon trước title */}
+          <img
+            src="https://img.icons8.com/?size=100&id=MubK8Jc9u2hm&format=png&color=064A55"
+            alt="chart-icon"
+            style={{ width: "20px", height: "20px" }}
+
+          />
+          <h3
+            style={{
+              fontFamily: "'Lexend Deca', sans-serif",
+              fontSize: "18px",
+              fontWeight: 600,
+              color: "#111827",
+              margin: 0,
+            }}
+          >
+            {title || "Bar Chart"}
+          </h3>
+        </div>
+
         {subtitle && (
-          <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#6b7280",
+              margin: 0,
+              fontFamily: "Imb Plex Sans, sans-serif",
+            }}
+          >
             {subtitle}
           </p>
         )}
-        <div style={{ marginTop: "12px", borderBottom: "1px solid #e5e7eb" }} />
+        <div style={{ marginTop: "8px", borderBottom: "1px solid #e5e7eb" }} />
       </div>
 
       {/* Chart Content */}
       <div
         style={{
+          fontFamily: "'Lexend Deca', sans-serif",
           height: "320px",
           display: "flex",
           flexDirection: orientation === "vertical" ? "row" : "column",
@@ -279,12 +372,21 @@ export const BarChartCustom: FC = () => {
               maxValue={maxValue}
               orientation={orientation as "vertical" | "horizontal"}
               showValues={showValues}
-              onBarClick={isDrillDownEnabled ? handleBarClick : undefined}
               index={index}
+              onBarClick={() => handleBarClick(dataPoint)}
             />
           ))
         )}
       </div>
+
+      {/* <button
+        onClick={() => {
+          setClickedBar({ label: "Manual trigger", value: 123 });
+          triggerClickBar();
+        }}
+      >
+        Send message
+      </button> */}
     </div>
   );
 };
